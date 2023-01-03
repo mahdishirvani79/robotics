@@ -8,6 +8,9 @@ class Robotic:
         self.DH = DH
         self.Ts = list()
         self.Rs = list()
+        self.Ws = list()
+        self.Vs = list()
+        self.THp = list()
         
     def makesingleTandR(self,DH):
         T = sympy.Array([[sympy.cos(DH[2]),                -sympy.sin(DH[2]),  0,  DH[1]],
@@ -28,38 +31,33 @@ class Robotic:
         for T in self.Ts:
             T_all = T_all @ (T)
         self.pinzero = T_all @ sympy.Matrix([0,0,0,1])
-        print(self.pinzero)
+        return self.pinzero
 
-    # def computeWandV(self):
-    #     th1_p = sympy("th1_p")
-    #     th1_p = sympy("th1_p")
-    #     th1_p = sympy("th1_p")
-
-
-    # def fkinCalc(self):
-    #     TT = np.eye(4)
-    #     for l in range(np.size(self.links,0)):
-    #         T = self.makeT(self.links[l])
-    #         TT = TT.dot(T)
-            
-    #     return TT
-    
-    # def fkin(self,joints):
-    #     # joints = list(map(np.deg2rad, joints))
-    #     for i in range(np.size(joints)):
-    #         if self.links[i][4] == 0:
-    #             self.links[i][3] = joints[i]
-    #         else:
-    #             self.links[i][2] = joints[i]
+    def computeWandV(self):
+        for i in range(self.DH.shape[0]):
+            if self.DH[i,2] != 0:
+                self.THp.append(sympy.Symbol(f"th{i+1}_p"))
+            if self.DH[i,2] == 0:
+                self.THp.append(0)
         
-    #     T = self.fkinCalc()
-    #     return T
+        self.Ws.append(sympy.Matrix([0,0,0]))
+        self.Vs.append(sympy.Matrix([0,0,0]))
+        for i in range(self.DH.shape[0]):
+            if self.DH[i,4] == 0:
+                W_new = (self.Rs[i] @ self.Ws[i]) + sympy.Matrix([0,0,self.THp[i]])
+                print(W_new)
+                self.Ws.append(W_new)
+                V_new = self.Rs[i] @ (self.Vs[i] + sympy.matrix_multiply_elementwise(self.Ws[i], sympy.Matrix([self.DH[i,1], 0, 0])))
+                print(V_new)
+                self.Vs.append(V_new)
+            if self.DH[i,4] == 1:
+                pass
 
 
 
 def run():
-    L2 = sympy.Symbol("L1")
-    L3 = sympy.Symbol("L2")
+    L2 = sympy.Symbol("L2")
+    L3 = sympy.Symbol("L3")
     Th1 = sympy.Symbol("Th1")
     Th2 = sympy.Symbol("Th2")
     Th3 = sympy.Symbol("Th3")
@@ -70,6 +68,7 @@ def run():
     # la = robot.fkin([30,30,30])
     robot.makeTandR()
     robot.PInZero()
+    robot.computeWandV()
     
 
 
