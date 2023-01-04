@@ -51,14 +51,14 @@ class Robotic:
                 W_new = (self.Rs[i] @ self.Ws[i]) + sympy.Matrix([0,0,self.THp[i]])
                 # print(W_new)
                 self.Ws.append(W_new)
-                V_new = self.Rs[i] @ (self.Vs[i] + sympy.matrix_multiply_elementwise(self.Ws[i], sympy.Matrix([self.DH[i,1], 0, 0])))
+                V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
                 # print(V_new)
                 self.Vs.append(V_new)
             elif self.DH[i,4] == 1:
                 W_new = (self.Rs[i] @ self.Ws[i]) 
                 # print(W_new)
                 self.Ws.append(W_new)
-                V_new = self.Rs[i] @ (self.Vs[i] + sympy.matrix_multiply_elementwise(self.Ws[i], sympy.Matrix([self.DH[i,1], 0, 0])))
+                V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
                 # print(V_new)
                 self.Vs.append(V_new)
 
@@ -66,9 +66,10 @@ class Robotic:
     def computeWandVinZero(self):
         WInZero = sympy.eye(3)
         VInZero = sympy.eye(3)
-        for R in self.Rs:
-            WInZero = WInZero @ R
-            VInZero = VInZero @ R
+        for i in self.Rs:
+            i = i.T
+            WInZero = WInZero @ i
+            VInZero = VInZero @ i
         self.WInZero = WInZero @ self.Ws[-1]
         self.VInZero = VInZero @ self.Vs[-1]
 
@@ -87,9 +88,10 @@ class Robotic:
     def computeTaw(self):
         FInZero = np.eye(3)
         MInZero = np.eye(3)
-        for R in self.Rs:
-            FInZero = FInZero @ R
-            MInZero = MInZero @ R
+        for i in self.Rs:
+            i = i.T
+            FInZero = FInZero @ i
+            MInZero = MInZero @ i
         FInZero = FInZero @ self.F
         MInZero = MInZero @ self.M
         tempMat = np.zeros((6,1))
@@ -112,7 +114,6 @@ def run():
     M = np.array([200, 0, 0]).reshape(3,1)
 
     robot = Robotic(DH, F, M)
-    # la = robot.fkin([30,30,30])
     robot.makeTandR()
     robot.PInZero()
     robot.computeWandV()
