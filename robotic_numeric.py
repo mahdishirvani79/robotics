@@ -4,7 +4,7 @@ import sympy
 
 class Robotic:
 
-    def __init__(self, DH, F, M):
+    def __init__(self, DH, F, M, path):
         self.DH = DH
         self.F = F
         self.M = M
@@ -13,8 +13,9 @@ class Robotic:
         self.Ws = list()
         self.Vs = list()
         self.THp = list()
-        
+        self.f = open(path, 'w')
 
+        
     def makesingleTandR(self,DH):
         T = np.array([[math.cos(DH[2]),                -math.sin(DH[2]),  0,  DH[1]],
                      [math.sin(DH[2])*math.cos(DH[0]), math.cos(DH[2])*math.cos(DH[0]), -math.sin(DH[0]), -DH[3]*math.sin(DH[0])],
@@ -34,6 +35,9 @@ class Robotic:
         for T in self.Ts:
             T_all = T_all @ (T)
         self.pinzero = T_all @ np.array([0,0,0,1]).reshape(4,1)
+        self.pinzero = self.pinzero[:-1]
+        print("P in zero coordinates is: " + str(self.pinzero) + "\n")
+        self.f.write("P in zero coordinates is: " + str(self.pinzero) + "\n")
         return self.pinzero
 
 
@@ -49,18 +53,18 @@ class Robotic:
         for i in range(self.DH.shape[0]):
             if self.DH[i,4] == 0:
                 W_new = (self.Rs[i] @ self.Ws[i]) + sympy.Matrix([0,0,self.THp[i]])
-                # print(W_new)
                 self.Ws.append(W_new)
                 V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
-                # print(V_new)
                 self.Vs.append(V_new)
             elif self.DH[i,4] == 1:
                 W_new = (self.Rs[i] @ self.Ws[i]) 
-                # print(W_new)
                 self.Ws.append(W_new)
                 V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
-                # print(V_new)
                 self.Vs.append(V_new)
+        print("last W is: " + str(self.Ws[-1]) + "\n")
+        print("last V is: " + str(self.Vs[-1]) + "\n")
+        self.f.write("last W is: " + str(self.Ws[-1]) + "\n")
+        self.f.write("last V is: " + str(self.Vs[-1]) + "\n")
 
 
     def computeWandVinZero(self):
@@ -83,6 +87,8 @@ class Robotic:
             for j in range(self.Jacobian.shape[1]):
                 self.Jacobian[i,j] = Jcalc[i].diff(self.THp[j])
         self.Jacobian = np.array(self.Jacobian.tolist())
+        print("Jacobian matrix is: " + str(self.Jacobian) + "\n")
+        self.f.write("Jacobian matrix is: " + str(self.Jacobian) + "\n")
 
 
     def computeTaw(self):
@@ -98,6 +104,8 @@ class Robotic:
         tempMat[0:3, :] = FInZero
         tempMat[3:6, :] = MInZero
         self.Taw = self.Jacobian.T @ tempMat
+        print("Taw is: " + str(self.Taw) + "\n")
+        self.f.write("Taw is: " + str(self.Taw) + "\n")
     
 
 def run():
@@ -106,6 +114,7 @@ def run():
     Th1 = math.radians(30)
     Th2 = math.radians(30)
     Th3 = math.radians(30)
+    file_name = "./out_numeric"
 
     DH = np.array([[0, 0, Th1, 0, 0], [math.radians(90), 0, Th2, 0, 0,],
                 [0, L2, Th3, 0, 0], [0, L3, 0, 0, 0]])
@@ -113,7 +122,7 @@ def run():
     F = np.array([-500, 0, 0]).reshape(3,1)
     M = np.array([200, 0, 0]).reshape(3,1)
 
-    robot = Robotic(DH, F, M)
+    robot = Robotic(DH, F, M, file_name)
     robot.makeTandR()
     robot.PInZero()
     robot.computeWandV()

@@ -4,7 +4,7 @@ import sympy
 
 class Robotic:
 
-    def __init__(self, DH, F, M):
+    def __init__(self, DH, F, M, path):
         self.DH = DH
         self.F = F
         self.M = M
@@ -13,7 +13,7 @@ class Robotic:
         self.Ws = list()
         self.Vs = list()
         self.THp = list()
-        
+        self.f = open(path, 'w')
 
     def makesingleTandR(self,DH):
         T = sympy.Array([[sympy.cos(DH[2]),                -sympy.sin(DH[2]),  0,  DH[1]],
@@ -34,6 +34,9 @@ class Robotic:
         for T in self.Ts:
             T_all = T_all @ (T)
         self.pinzero = T_all @ sympy.Matrix([0,0,0,1])
+        self.pinzero = self.pinzero[:-1]
+        print("P in zero coordinates is: " + str(self.pinzero) + "\n")
+        self.f.write("P in zero coordinates is: " + str(self.pinzero) + "\n")
         return self.pinzero
 
 
@@ -49,18 +52,18 @@ class Robotic:
         for i in range(self.DH.shape[0]):
             if self.DH[i,4] == 0:
                 W_new = (self.Rs[i] @ self.Ws[i]) + sympy.Matrix([0,0,self.THp[i]])
-                # print(W_new)
                 self.Ws.append(W_new)
                 V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
-                # print(V_new)
                 self.Vs.append(V_new)
             elif self.DH[i,4] == 1:
                 W_new = (self.Rs[i] @ self.Ws[i]) 
-                # print(W_new)
                 self.Ws.append(W_new)
                 V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
-                # print(V_new)
                 self.Vs.append(V_new)
+        print("last W is: " + str(self.Ws[-1]) + "\n")
+        print("last V is: " + str(self.Vs[-1]) + "\n")
+        self.f.write("last W is: " + str(self.Ws[-1]) + "\n")
+        self.f.write("last V is: " + str(self.Vs[-1]) + "\n")
 
 
     def computeWandVinZero(self):
@@ -68,16 +71,10 @@ class Robotic:
         VInZero = sympy.eye(3)
         for i in self.Rs:
             i = i.T
-            # print(R)
             WInZero = WInZero @ i
             VInZero = VInZero @ i
-            # print(WInZero)
-        # print(self.Ws[-1])
-        # print(self.Vs[-1])
         self.WInZero = WInZero @ self.Ws[-1]
         self.VInZero = VInZero @ self.Vs[-1]
-        # print(self.WInZero)
-        # print(self.VInZero)
 
 
     def computeJacobian(self):
@@ -88,7 +85,8 @@ class Robotic:
         for i in range(self.Jacobian.shape[0]):
             for j in range(self.Jacobian.shape[1]):
                 self.Jacobian[i,j] = Jcalc[i].diff(self.THp[j])
-        print(self.Jacobian)
+        print("Jacobian matrix is: " + str(self.Jacobian) + "\n")
+        self.f.write("Jacobian matrix is: " + str(self.Jacobian) + "\n")
 
 
     def computeTaw(self):
@@ -104,6 +102,8 @@ class Robotic:
         tempMat[0:3, :] = FInZero
         tempMat[3:6, :] = MInZero
         self.Taw = self.Jacobian.T @ tempMat
+        print("Taw is: " + str(self.Taw) + "\n")
+        self.f.write("Taw is: " + str(self.Taw) + "\n")
     
 
 def run():
@@ -112,6 +112,7 @@ def run():
     Th1 = sympy.Symbol("Th1")
     Th2 = sympy.Symbol("Th2")
     Th3 = sympy.Symbol("Th3")
+    file_name = "./out_symbolic.txt"
 
     DH = sympy.Array([[0, 0, Th1, 0, 0], [math.radians(90), 0, Th2, 0, 0,],
                 [0, L2, Th3, 0, 0], [0, L3, 0, 0, 0]])
@@ -119,7 +120,7 @@ def run():
     F = sympy.Matrix([-500, 0, 0])
     M = sympy.Matrix([200, 0, 0])
 
-    robot = Robotic(DH, F, M)
+    robot = Robotic(DH, F, M, file_name)
     # la = robot.fkin([30,30,30])
     robot.makeTandR()
     robot.PInZero()
