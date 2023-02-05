@@ -21,7 +21,12 @@ class Robotic:
                      [sympy.sin(DH[2])*round(math.sin(DH[0])), sympy.cos(DH[2])*round(math.sin(DH[0])),  round(math.cos(DH[0])),  DH[3]*round(math.cos(DH[0]))],
                      [0,                                0,                                0,                1]]).tomatrix()
         self.Ts.append(T)
-        self.Rs.append(T[0:3, 0:3].T)
+        print(str(len(self.Ts)) + "th T is" + str(T) + "\n")
+        self.f.write(str(len(self.Ts)) + "th T is" + str(T) + "\n")
+        R = T[0:3, 0:3].T
+        self.Rs.append(R)
+        print(str(len(self.Rs)) + "th R is" + str(R) + "\n")
+        self.f.write(str(len(self.Rs)) + "th R is" + str(R) + "\n")
 
 
     def makeTandR(self):
@@ -45,7 +50,7 @@ class Robotic:
             if self.DH[i,2] != 0:
                 self.THp.append(sympy.Symbol(f"th{i+1}_p"))
             elif self.DH[i,2] == 0:
-                self.THp.append(0)
+                self.THp.append(sympy.Symbol(f"d{i+1}_p"))
         
         self.Ws.append(sympy.Matrix([0,0,0]))
         self.Vs.append(sympy.Matrix([0,0,0]))
@@ -53,12 +58,14 @@ class Robotic:
             if self.DH[i,4] == 0:
                 W_new = (self.Rs[i] @ self.Ws[i]) + sympy.Matrix([0,0,self.THp[i]])
                 self.Ws.append(W_new)
+                # print(W_new)
                 V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
                 self.Vs.append(V_new)
+                # print(V_new)
             elif self.DH[i,4] == 1:
                 W_new = (self.Rs[i] @ self.Ws[i]) 
                 self.Ws.append(W_new)
-                V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0])))
+                V_new = self.Rs[i] @ (self.Vs[i] + self.Ws[i].cross(sympy.Matrix([self.DH[i,1], 0, 0]))) + sympy.Matrix([0,0,self.THp[i]])
                 self.Vs.append(V_new)
         print("last W is: " + str(self.Ws[-1]) + "\n")
         print("last V is: " + str(self.Vs[-1]) + "\n")
@@ -75,6 +82,8 @@ class Robotic:
             VInZero = VInZero @ i
         self.WInZero = WInZero @ self.Ws[-1]
         self.VInZero = VInZero @ self.Vs[-1]
+        print("W in zero is:", str(self.WInZero) + "\n")
+        print("V in zero is:", str(self.VInZero) + "\n")
 
 
     def computeJacobian(self):
@@ -98,6 +107,10 @@ class Robotic:
             MInZero = MInZero @ i
         FInZero = FInZero @ self.F
         MInZero = MInZero @ self.M
+        print("F in zero is:", str(FInZero), "\n")
+        self.f.write("F in zero is:" + str(FInZero) + "\n")
+        print("M in zero is:", str(MInZero), "\n")
+        self.f.write("M in zero is:" + str(MInZero) + "\n")
         tempMat = sympy.zeros(6,1)
         tempMat[0:3, :] = FInZero
         tempMat[3:6, :] = MInZero
@@ -107,18 +120,32 @@ class Robotic:
     
 
 def run():
-    L2 = sympy.Symbol("L2")
-    L3 = sympy.Symbol("L3")
-    Th1 = sympy.Symbol("Th1")
-    Th2 = sympy.Symbol("Th2")
-    Th3 = sympy.Symbol("Th3")
+    print("number of joints: ")
+    n = int(input())
+    print("inter denavit hartenberg:")
+    DH = list()
+    for _ in range(n):
+        lst = input().split()
+        DH.append(lst)
+    for i in range(n):
+        for j in range(5):
+            if DH[i][j].isnumeric():
+                if j == 0:
+                    DH[i][j] = math.radians(int(DH[i][j]))
+                else:
+                    DH[i][j] = float(DH[i][j])
+            else:
+                DH[i][j] = sympy.Symbol(DH[i][j])
     file_name = "./out_symbolic.txt"
-
-    DH = sympy.Array([[0, 0, Th1, 0, 0], [math.radians(90), 0, Th2, 0, 0,],
-                [0, L2, Th3, 0, 0], [0, L3, 0, 0, 0]])
-
-    F = sympy.Matrix([-500, 0, 0])
-    M = sympy.Matrix([200, 0, 0])
+    DH = sympy.Array(DH)
+    print("inter F parameters:")
+    F = input().split()
+    F = [float(f) for f in F]
+    F = sympy.Matrix(F)
+    print("inter M parameters:")
+    M = input().split()
+    M = [float(m) for m in M]
+    M = sympy.Matrix(M)
 
     robot = Robotic(DH, F, M, file_name)
     # la = robot.fkin([30,30,30])
